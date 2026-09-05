@@ -1,6 +1,7 @@
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 import Header from "@/components/Header.jsx";
 import Footer from "@/components/Footer.jsx";
 import PageTransition from "@/components/PageTransition.jsx";
@@ -40,13 +41,15 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <AuthProvider>
-          <CartProvider>
-            <Header />
-            <main>
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </CartProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <Header />
+              <main>
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+            </CartProvider>
+          </WishlistProvider>
         </AuthProvider>
       </body>
     </html>

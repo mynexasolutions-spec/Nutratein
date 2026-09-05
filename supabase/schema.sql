@@ -182,3 +182,44 @@ from (values
 ) as v(name, slug, price, image_url, category_slug, featured, short_desc)
 join public.categories c on c.slug = v.category_slug
 on conflict (slug) do nothing;
+
+-- ============================================================
+-- REVIEWS (Product reviews with admin moderation status)
+-- ============================================================
+create table if not exists public.reviews (
+  id            uuid primary key default uuid_generate_v4(),
+  product_id    uuid references public.products(id) on delete cascade,
+  product_slug  text,
+  product_name  text,
+  user_name     text not null,
+  user_email    text,
+  rating        integer not null check (rating >= 1 and rating <= 5),
+  comment       text not null,
+  status        text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at    timestamptz not null default now()
+);
+
+create index if not exists reviews_product_id_idx on public.reviews(product_id);
+create index if not exists reviews_status_idx on public.reviews(status);
+
+alter table public.reviews enable row level security;
+
+-- Everyone can read approved reviews
+create policy "Anyone can read approved reviews" on public.reviews
+  for select using (status = 'approved');
+
+-- Anyone can submit a review (it starts as pending)
+create policy "Anyone can submit a review" on public.reviews
+  for insert with check (status = 'pending');
+
+-- Admins can update/delete reviews
+create policy "Admins can update reviews" on public.reviews
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true)
+  );
+
+create policy "Admins can delete reviews" on public.reviews
+  for delete using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin = true)
+  );
+

@@ -142,16 +142,19 @@ export default function Footer() {
               ) : (
                 <form className="modern-newsletter-form" onSubmit={handleSubscribe}>
                   <div className="newsletter-input-wrap">
+                    <div className="footer-newsletter-icon" aria-hidden="true">
+                      <Mail size={16} />
+                    </div>
                     <input 
                       type="email" 
                       placeholder="Enter research email..." 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="newsletter-input"
+                      className="newsletter-input footer-newsletter-input"
                     />
-                    <button type="submit" className="newsletter-submit-btn" aria-label="Subscribe">
-                      <ArrowRight size={18} />
+                    <button type="submit" className="newsletter-submit-btn footer-newsletter-btn" aria-label="Subscribe">
+                      <ArrowRight size={17} />
                     </button>
                   </div>
                 </form>
@@ -167,16 +170,6 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Explicit Research Compliance Callout */}
-          <div className="footer-compliance-box">
-            <div className="compliance-heading">
-              <FlaskConical size={16} />
-              <span>MANDATORY RESEARCH NOTICE</span>
-            </div>
-            <p className="compliance-body">
-              All chemical substances, peptides, and research materials cataloged or supplied by Drago Pharma are designated exclusively for <em>in-vitro</em> laboratory research, analytical chromatography, and scientific evaluation by trained personnel. They are strictly <strong>NOT for human consumption, clinical application, therapeutic treatment, veterinary administration, or food/cosmetic use</strong>.
-            </p>
-          </div>
 
           {/* Bottom Bar */}
           <div className="modern-footer-bottom">

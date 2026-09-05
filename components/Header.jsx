@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useWishlist } from '@/context/WishlistContext';
 import CartDrawer from './CartDrawer.jsx';
-import { User, ShoppingCart, Menu, X, Settings, ArrowRight, FlaskConical } from 'lucide-react';
+import { User, ShoppingCart, Menu, X, Settings, ArrowRight, FlaskConical, Heart } from 'lucide-react';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home', end: true },
@@ -23,6 +24,7 @@ function isActive(pathname, href, end) {
 
 export default function Header() {
   const { itemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { user, isAdmin } = useAuth();
   const [cartOpen, setCartOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,6 +107,21 @@ export default function Header() {
               <User size={20} strokeWidth={2.2} />
             </button>
 
+            <Link
+              href="/wishlist"
+              className="icon-btn"
+              aria-label={`View wishlist with ${wishlistCount} items`}
+              title="My Wishlist"
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Heart size={20} strokeWidth={2.2} />
+              {wishlistCount > 0 && (
+                <span className="cart-badge" style={{ background: '#dc2626' }}>
+                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                </span>
+              )}
+            </Link>
+
             <button
               className="icon-btn cart-btn"
               aria-label={`View cart with ${itemCount} items`}
@@ -153,6 +170,16 @@ export default function Header() {
                   </Link>
                 );
               })}
+              <Link
+                href="/wishlist"
+                className={`mobile-nav-link ${pathname === '/wishlist' ? 'active' : ''}`}
+                onClick={() => setMenuOpen(false)}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Heart size={16} color="#dc2626" /> My Wishlist ({wishlistCount})
+                </span>
+                <ArrowRight size={16} className="mobile-link-arrow" />
+              </Link>
             </div>
 
             <div className="mobile-nav-footer">

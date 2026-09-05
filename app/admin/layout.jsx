@@ -3,13 +3,24 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import AdminRoute from '@/components/AdminRoute.jsx';
+import {
+  LayoutDashboard,
+  Layers,
+  Package,
+  Tags,
+  ShoppingBag,
+  ExternalLink,
+  Store,
+  Star
+} from 'lucide-react';
 
 const LINKS = [
-  { href: '/admin', label: 'Dashboard', end: true },
-  { href: '/admin/homepage', label: 'Homepage Content' },
-  { href: '/admin/products', label: 'Products' },
-  { href: '/admin/categories', label: 'Categories' },
-  { href: '/admin/orders', label: 'Orders' },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/reviews', label: 'Reviews', icon: Star },
+  { href: '/admin/categories', label: 'Categories', icon: Tags },
+  { href: '/admin/homepage', label: 'Homepage Content', icon: Layers },
 ];
 
 function isActive(pathname, href, end) {
@@ -23,22 +34,67 @@ export default function AdminLayout({ children }) {
   return (
     <AdminRoute>
       <div className="admin-shell">
-        <div className="container admin-container">
-          <aside className="admin-sidebar">
-            <h3>Admin</h3>
-            <nav>
-              {LINKS.map((link) => (
+        <div className="admin-container">
+          {/* Mobile Horizontal Navigation */}
+          <div className="admin-mobile-nav">
+            {LINKS.map((link) => {
+              const Icon = link.icon;
+              const active = isActive(pathname, link.href, link.end);
+              return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={isActive(pathname, link.href, link.end) ? 'active' : undefined}
+                  className={`admin-mobile-item ${active ? 'active' : ''}`}
                 >
-                  {link.label}
+                  <Icon size={15} />
+                  <span>{link.label}</span>
                 </Link>
-              ))}
+              );
+            })}
+          </div>
+
+          {/* Desktop Sidebar Navigation */}
+          <aside className="admin-sidebar">
+            <div className="admin-sidebar-header">
+              <div className="admin-sidebar-title">
+                <span>Management</span>
+                <span className="admin-live-pill">
+                  <span className="admin-live-dot" />
+                  Live
+                </span>
+              </div>
+            </div>
+
+            <nav>
+              {LINKS.map((link) => {
+                const Icon = link.icon;
+                const active = isActive(pathname, link.href, link.end);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`admin-nav-item ${active ? 'active' : ''}`}
+                  >
+                    <Icon size={17} />
+                    <span>{link.label}</span>
+                  </Link>
+                );
+              })}
             </nav>
+
+            <div className="admin-sidebar-footer">
+              <Link href="/" target="_blank" className="admin-store-link">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Store size={14} />
+                  Live Storefront
+                </span>
+                <ExternalLink size={13} />
+              </Link>
+            </div>
           </aside>
-          <div className="admin-content">{children}</div>
+
+          {/* Main Dashboard Content */}
+          <main className="admin-content">{children}</main>
         </div>
       </div>
     </AdminRoute>

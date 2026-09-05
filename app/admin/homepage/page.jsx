@@ -2,6 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { getSiteContent, saveSiteContent } from '@/lib/siteContent';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Layers,
+  Save,
+  CheckCircle2,
+  ExternalLink,
+  Plus,
+  Trash2,
+  Sparkles,
+  ShieldCheck,
+  TrendingUp,
+  MessageSquare,
+  Mail,
+  AlertCircle
+} from 'lucide-react';
+import Link from 'next/link';
 
 const DEFAULT_CONTENT = {
   hero: {
@@ -23,9 +39,18 @@ const DEFAULT_CONTENT = {
 
 export default function AdminHomepage() {
   const [content, setContent] = useState(DEFAULT_CONTENT);
+  const [activeTab, setActiveTab] = useState('hero'); // 'hero' | 'badges' | 'features' | 'testimonials' | 'newsletter'
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((c) => (c === msg ? null : c));
+    }, 2500);
+  };
 
   useEffect(() => {
     getSiteContent('home', DEFAULT_CONTENT).then((value) => {
@@ -36,9 +61,16 @@ export default function AdminHomepage() {
 
   async function handleSave() {
     setSaving(true);
-    const { error } = await saveSiteContent('home', content);
-    setSaving(false);
-    if (!error) setSavedAt(new Date());
+    try {
+      const { error } = await saveSiteContent('home', content);
+      if (error) throw error;
+      setSavedAt(new Date());
+      showToast('Homepage content updated live in Supabase!');
+    } catch (err) {
+      showToast('Failed to save content. Check permissions.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateHero(field, val) {
@@ -51,130 +83,514 @@ export default function AdminHomepage() {
     setContent((c) => ({ ...c, newsletter: { ...c.newsletter, [field]: val } }));
   }
 
-  // --- list helpers (badges, stats, features, testimonials) ---
   function updateListItem(key, index, patch) {
     setContent((c) => {
-      const list = [...c[key]];
+      const list = [...(c[key] || [])];
       list[index] = typeof patch === 'object' ? { ...list[index], ...patch } : patch;
       return { ...c, [key]: list };
     });
   }
   function addListItem(key, blank) {
-    setContent((c) => ({ ...c, [key]: [...c[key], blank] }));
+    setContent((c) => ({ ...c, [key]: [...(c[key] || []), blank] }));
   }
   function removeListItem(key, index) {
-    setContent((c) => ({ ...c, [key]: c[key].filter((_, i) => i !== index) }));
+    setContent((c) => ({ ...c, [key]: (c[key] || []).filter((_, i) => i !== index) }));
   }
 
-  if (loading) return <p>Loading…</p>;
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <p style={{ color: '#64748b' }}>Loading homepage telemetry...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1>Homepage Content</h1>
-          <p className="helper-text">Everything here is live on the homepage the moment you save.</p>
+      {/* Toast Alert */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            className="account-toast"
+            initial={{ opacity: 0, y: 25, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <CheckCircle2 size={18} style={{ color: '#10b981' }} />
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <div className="admin-dash-header">
+        <div className="admin-dash-title-group">
+          <h1>Homepage Content Editor</h1>
+          <p className="admin-dash-subtitle">
+            Configure storefront hero slogans, promotional banners, feature blocks, and social proof.
+          </p>
         </div>
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save Changes'}
+
+        <div className="admin-dash-actions">
+          <Link href="/" target="_blank" className="account-btn-secondary">
+            <ExternalLink size={15} />
+            <span>Preview Live</span>
+          </Link>
+
+          <button className="account-btn-primary" onClick={handleSave} disabled={saving}>
+            <Save size={16} />
+            <span>{saving ? 'Publishing...' : 'Publish Changes'}</span>
+          </button>
+        </div>
+      </div>
+
+      {savedAt && (
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(16, 185, 129, 0.1)',
+            color: '#047857',
+            padding: '4px 12px',
+            borderRadius: 100,
+            fontSize: 12.5,
+            fontWeight: 650,
+            marginBottom: 20,
+          }}
+        >
+          <CheckCircle2 size={13} />
+          <span>Last published live at {savedAt.toLocaleTimeString()}</span>
+        </div>
+      )}
+
+      {/* Editor Tabs Navigation */}
+      <div className="account-tabs-wrapper" style={{ marginBottom: 24 }}>
+        <button
+          className={`account-tab ${activeTab === 'hero' ? 'active' : ''}`}
+          onClick={() => setActiveTab('hero')}
+        >
+          <Sparkles size={16} />
+          <span>Hero &amp; Promo</span>
+        </button>
+
+        <button
+          className={`account-tab ${activeTab === 'badges' ? 'active' : ''}`}
+          onClick={() => setActiveTab('badges')}
+        >
+          <ShieldCheck size={16} />
+          <span>Badges &amp; Metrics</span>
+        </button>
+
+        <button
+          className={`account-tab ${activeTab === 'features' ? 'active' : ''}`}
+          onClick={() => setActiveTab('features')}
+        >
+          <Layers size={16} />
+          <span>Feature Highlights</span>
+        </button>
+
+        <button
+          className={`account-tab ${activeTab === 'testimonials' ? 'active' : ''}`}
+          onClick={() => setActiveTab('testimonials')}
+        >
+          <MessageSquare size={16} />
+          <span>Testimonials</span>
+        </button>
+
+        <button
+          className={`account-tab ${activeTab === 'newsletter' ? 'active' : ''}`}
+          onClick={() => setActiveTab('newsletter')}
+        >
+          <Mail size={16} />
+          <span>Newsletter</span>
         </button>
       </div>
-      {savedAt && <p className="helper-text" style={{ color: '#1a7f37' }}>Saved at {savedAt.toLocaleTimeString()}</p>}
 
-      {/* HERO */}
-      <div className="form-card">
-        <h3>Hero Banner</h3>
-        <label>Eyebrow text<input value={content.hero.eyebrow} onChange={(e) => updateHero('eyebrow', e.target.value)} /></label>
-        <label>Headline<input value={content.hero.title} onChange={(e) => updateHero('title', e.target.value)} /></label>
-        <label>Subtitle<textarea rows={3} value={content.hero.subtitle} onChange={(e) => updateHero('subtitle', e.target.value)} /></label>
-        <div className="admin-form-grid">
-          <label>Primary button label<input value={content.hero.primary_cta_label} onChange={(e) => updateHero('primary_cta_label', e.target.value)} /></label>
-          <label>Primary button link<input value={content.hero.primary_cta_link} onChange={(e) => updateHero('primary_cta_link', e.target.value)} /></label>
-          <label>Secondary button label<input value={content.hero.secondary_cta_label} onChange={(e) => updateHero('secondary_cta_label', e.target.value)} /></label>
-          <label>Secondary button link<input value={content.hero.secondary_cta_link} onChange={(e) => updateHero('secondary_cta_link', e.target.value)} /></label>
-        </div>
-      </div>
+      {/* TAB 1: HERO & PROMO */}
+      {activeTab === 'hero' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {/* Hero Card */}
+          <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 17, fontWeight: 750 }}>
+              Hero Banner Presentation
+            </h3>
 
-      {/* PROMO BANNER */}
-      <div className="form-card">
-        <h3>Promo Banner</h3>
-        <label className="checkbox-label">
-          <input type="checkbox" checked={content.promo.enabled} onChange={(e) => updatePromo('enabled', e.target.checked)} />
-          Show promo banner
-        </label>
-        <label>Text<input value={content.promo.text} onChange={(e) => updatePromo('text', e.target.value)} placeholder="Free shipping on orders over $150" /></label>
-        <div className="admin-form-grid">
-          <label>Button label<input value={content.promo.link_label} onChange={(e) => updatePromo('link_label', e.target.value)} /></label>
-          <label>Button link<input value={content.promo.link} onChange={(e) => updatePromo('link', e.target.value)} /></label>
-        </div>
-      </div>
-
-      {/* TRUST BADGES */}
-      <div className="form-card">
-        <h3>Trust Badge Strip</h3>
-        {content.trust_badges.map((badge, i) => (
-          <div key={i} className="admin-list-row">
-            <input value={badge} onChange={(e) => updateListItem('trust_badges', i, e.target.value)} />
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => removeListItem('trust_badges', i)}>Remove</button>
-          </div>
-        ))}
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => addListItem('trust_badges', 'New badge')}>+ Add badge</button>
-      </div>
-
-      {/* STATS */}
-      <div className="form-card">
-        <h3>Stats Counters</h3>
-        {content.stats.map((s, i) => (
-          <div key={i} className="admin-list-row admin-list-row-3">
-            <input placeholder="Label" value={s.label} onChange={(e) => updateListItem('stats', i, { label: e.target.value })} />
-            <input placeholder="Value" type="number" value={s.value} onChange={(e) => updateListItem('stats', i, { value: e.target.value })} />
-            <input placeholder="Suffix (+, %)" value={s.suffix} onChange={(e) => updateListItem('stats', i, { suffix: e.target.value })} />
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => removeListItem('stats', i)}>Remove</button>
-          </div>
-        ))}
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => addListItem('stats', { label: 'New stat', value: 0, suffix: '' })}>+ Add stat</button>
-      </div>
-
-      {/* FEATURES */}
-      <div className="form-card">
-        <h3>"Why Us" Feature Grid</h3>
-        {content.features.map((f, i) => (
-          <div key={i} className="admin-feature-row">
-            <input placeholder="Emoji" style={{ width: 60 }} value={f.icon} onChange={(e) => updateListItem('features', i, { icon: e.target.value })} />
-            <input placeholder="Title" value={f.title} onChange={(e) => updateListItem('features', i, { title: e.target.value })} />
-            <input placeholder="Description" value={f.text} onChange={(e) => updateListItem('features', i, { text: e.target.value })} />
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => removeListItem('features', i)}>Remove</button>
-          </div>
-        ))}
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => addListItem('features', { icon: '✨', title: '', text: '' })}>+ Add feature</button>
-      </div>
-
-      {/* TESTIMONIALS */}
-      <div className="form-card">
-        <h3>Testimonials</h3>
-        {content.testimonials.map((t, i) => (
-          <div key={i} className="form-card" style={{ background: 'var(--color-surface)' }}>
-            <label>Quote<textarea rows={2} value={t.quote} onChange={(e) => updateListItem('testimonials', i, { quote: e.target.value })} /></label>
-            <div className="admin-form-grid">
-              <label>Author<input value={t.author} onChange={(e) => updateListItem('testimonials', i, { author: e.target.value })} /></label>
-              <label>Role<input value={t.role} onChange={(e) => updateListItem('testimonials', i, { role: e.target.value })} /></label>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--color-ink-soft)' }}>
+                Eyebrow Accent Tag
+              </label>
+              <input
+                value={content.hero?.eyebrow || ''}
+                onChange={(e) => updateHero('eyebrow', e.target.value)}
+                placeholder="e.g. Ultra-Pure Lyophilized Research Peptides"
+                style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid var(--color-border)', borderRadius: 8 }}
+              />
             </div>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => removeListItem('testimonials', i)}>Remove</button>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--color-ink-soft)' }}>
+                Main Title / Headline
+              </label>
+              <input
+                value={content.hero?.title || ''}
+                onChange={(e) => updateHero('title', e.target.value)}
+                placeholder="e.g. Precision Synthetic Peptides for Scientific Discovery"
+                style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid var(--color-border)', borderRadius: 8 }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--color-ink-soft)' }}>
+                Subtitle Description
+              </label>
+              <textarea
+                rows={3}
+                value={content.hero?.subtitle || ''}
+                onChange={(e) => updateHero('subtitle', e.target.value)}
+                placeholder="Comprehensive research mission statement"
+                style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid var(--color-border)', borderRadius: 8, fontFamily: 'inherit' }}
+              />
+            </div>
+
+            <div className="admin-form-grid">
+              <label>
+                Primary Button Label
+                <input
+                  value={content.hero?.primary_cta_label || ''}
+                  onChange={(e) => updateHero('primary_cta_label', e.target.value)}
+                />
+              </label>
+
+              <label>
+                Primary Button Link
+                <input
+                  value={content.hero?.primary_cta_link || ''}
+                  onChange={(e) => updateHero('primary_cta_link', e.target.value)}
+                />
+              </label>
+
+              <label>
+                Secondary Button Label
+                <input
+                  value={content.hero?.secondary_cta_label || ''}
+                  onChange={(e) => updateHero('secondary_cta_label', e.target.value)}
+                />
+              </label>
+
+              <label>
+                Secondary Button Link
+                <input
+                  value={content.hero?.secondary_cta_link || ''}
+                  onChange={(e) => updateHero('secondary_cta_link', e.target.value)}
+                />
+              </label>
+            </div>
           </div>
-        ))}
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => addListItem('testimonials', { quote: '', author: '', role: '' })}>+ Add testimonial</button>
-      </div>
 
-      {/* NEWSLETTER */}
-      <div className="form-card">
-        <h3>Newsletter Block</h3>
-        <label>Title<input value={content.newsletter.title} onChange={(e) => updateNewsletter('title', e.target.value)} /></label>
-        <label>Subtitle<input value={content.newsletter.subtitle} onChange={(e) => updateNewsletter('subtitle', e.target.value)} /></label>
-      </div>
+          {/* Promo Strip Card */}
+          <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 750 }}>Top Promotional Strip</h3>
+              <label className="checkbox-label" style={{ cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={content.promo?.enabled || false}
+                  onChange={(e) => updatePromo('enabled', e.target.checked)}
+                />
+                <span style={{ fontWeight: 650 }}>Enable Notification Banner</span>
+              </label>
+            </div>
 
-      <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : 'Save Changes'}
-      </button>
+            <div className="admin-form-grid">
+              <label style={{ gridColumn: 'span 2' }}>
+                Announcement Message
+                <input
+                  value={content.promo?.text || ''}
+                  onChange={(e) => updatePromo('text', e.target.value)}
+                  placeholder="e.g. Free Express Cold-Chain Shipping on Orders Over $150"
+                />
+              </label>
+
+              <label>
+                CTA Button Text
+                <input
+                  value={content.promo?.link_label || ''}
+                  onChange={(e) => updatePromo('link_label', e.target.value)}
+                />
+              </label>
+
+              <label>
+                CTA Target Link
+                <input
+                  value={content.promo?.link || ''}
+                  onChange={(e) => updatePromo('link', e.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: TRUST BADGES & METRICS */}
+      {activeTab === 'badges' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {/* Trust Badges */}
+          <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 750 }}>Trust &amp; Quality Badges</h3>
+                <span style={{ fontSize: 12.5, color: '#64748b' }}>Accreditations under the hero banner</span>
+              </div>
+              <button
+                type="button"
+                className="account-btn-secondary"
+                onClick={() => addListItem('trust_badges', '≥ 99% HPLC Verified')}
+              >
+                <Plus size={15} /> Add Badge
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(content.trust_badges || []).map((badge, idx) => (
+                <div key={idx} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <input
+                    value={badge}
+                    onChange={(e) => updateListItem('trust_badges', idx, e.target.value)}
+                    style={{ flex: 1, padding: '8px 12px', fontSize: 13.5, border: '1px solid var(--color-border)', borderRadius: 8 }}
+                  />
+                  <button
+                    className="admin-copy-icon-btn"
+                    style={{ color: '#dc2626', padding: 8 }}
+                    onClick={() => removeListItem('trust_badges', idx)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Numerical Stats */}
+          <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 750 }}>Numeric Counter Metrics</h3>
+                <span style={{ fontSize: 12.5, color: '#64748b' }}>Showcase lab production capacity</span>
+              </div>
+              <button
+                type="button"
+                className="account-btn-secondary"
+                onClick={() => addListItem('stats', { value: '99.8%', label: 'Average Purity' })}
+              >
+                <Plus size={15} /> Add Metric
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(content.stats || []).map((st, idx) => (
+                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 12, alignItems: 'center' }}>
+                  <input
+                    value={st.value}
+                    onChange={(e) => updateListItem('stats', idx, { value: e.target.value })}
+                    placeholder="e.g. 50,000+"
+                    style={{ padding: '8px 12px', fontSize: 13.5, border: '1px solid var(--color-border)', borderRadius: 8, fontWeight: 750 }}
+                  />
+                  <input
+                    value={st.label}
+                    onChange={(e) => updateListItem('stats', idx, { label: e.target.value })}
+                    placeholder="e.g. Vials Synthesized Annually"
+                    style={{ padding: '8px 12px', fontSize: 13.5, border: '1px solid var(--color-border)', borderRadius: 8 }}
+                  />
+                  <button
+                    className="admin-copy-icon-btn"
+                    style={{ color: '#dc2626', padding: 8 }}
+                    onClick={() => removeListItem('stats', idx)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: FEATURES & HIGHLIGHTS */}
+      {activeTab === 'features' && (
+        <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 750 }}>Feature Pillars &amp; Standards</h3>
+              <span style={{ fontSize: 12.5, color: '#64748b' }}>Why researchers choose Nutratein</span>
+            </div>
+            <button
+              type="button"
+              className="account-btn-secondary"
+              onClick={() => addListItem('features', { icon: '🛡️', title: 'New Standard', body: 'Description of analytical protocol...' })}
+            >
+              <Plus size={15} /> Add Feature
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {(content.features || []).map((feat, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '60px 1fr 2fr auto',
+                  gap: 12,
+                  alignItems: 'center',
+                  background: '#f8fafc',
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: '1px solid #f1f5f9',
+                }}
+              >
+                <input
+                  value={feat.icon || ''}
+                  onChange={(e) => updateListItem('features', idx, { icon: e.target.value })}
+                  placeholder="Icon"
+                  style={{ textAlign: 'center', padding: '8px 4px', fontSize: 16, border: '1px solid var(--color-border)', borderRadius: 8 }}
+                />
+                <input
+                  value={feat.title || ''}
+                  onChange={(e) => updateListItem('features', idx, { title: e.target.value })}
+                  placeholder="Feature Title"
+                  style={{ padding: '8px 12px', fontSize: 13.5, border: '1px solid var(--color-border)', borderRadius: 8, fontWeight: 650 }}
+                />
+                <input
+                  value={feat.body || ''}
+                  onChange={(e) => updateListItem('features', idx, { body: e.target.value })}
+                  placeholder="Description..."
+                  style={{ padding: '8px 12px', fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 8 }}
+                />
+                <button
+                  className="admin-copy-icon-btn"
+                  style={{ color: '#dc2626', padding: 8 }}
+                  onClick={() => removeListItem('features', idx)}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: TESTIMONIALS */}
+      {activeTab === 'testimonials' && (
+        <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 750 }}>Institutional Testimonials</h3>
+              <span style={{ fontSize: 12.5, color: '#64748b' }}>Feedback from research laboratories</span>
+            </div>
+            <button
+              type="button"
+              className="account-btn-secondary"
+              onClick={() => addListItem('testimonials', { quote: 'Consistent purity across all production runs.', author: 'Dr. Sarah M.', role: 'Biochemical Research Fellow' })}
+            >
+              <Plus size={15} /> Add Testimonial
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {(content.testimonials || []).map((t, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>
+                    Testimonial #{idx + 1}
+                  </span>
+                  <button
+                    className="admin-copy-icon-btn"
+                    style={{ color: '#dc2626' }}
+                    onClick={() => removeListItem('testimonials', idx)}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+
+                <textarea
+                  rows={2}
+                  value={t.quote || ''}
+                  onChange={(e) => updateListItem('testimonials', idx, { quote: e.target.value })}
+                  placeholder="Quote text..."
+                  style={{ width: '100%', padding: '8px 12px', fontSize: 13.5, border: '1px solid var(--color-border)', borderRadius: 8, fontFamily: 'inherit' }}
+                />
+
+                <div className="admin-form-grid" style={{ marginBottom: 0 }}>
+                  <input
+                    value={t.author || ''}
+                    onChange={(e) => updateListItem('testimonials', idx, { author: e.target.value })}
+                    placeholder="Author name (e.g. Dr. Robert Vance)"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 8 }}
+                  />
+                  <input
+                    value={t.role || ''}
+                    onChange={(e) => updateListItem('testimonials', idx, { role: e.target.value })}
+                    placeholder="Affiliation / Role"
+                    style={{ padding: '8px 12px', fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 8 }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: NEWSLETTER */}
+      {activeTab === 'newsletter' && (
+        <div className="admin-card-section" style={{ padding: '24px 26px' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 17, fontWeight: 750 }}>Newsletter Subscription Footer</h3>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--color-ink-soft)' }}>
+              Newsletter Title
+            </label>
+            <input
+              value={content.newsletter?.title || ''}
+              onChange={(e) => updateNewsletter('title', e.target.value)}
+              placeholder="e.g. Receive Analytical Bulletins &amp; Batch Alerts"
+              style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid var(--color-border)', borderRadius: 8 }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--color-ink-soft)' }}>
+              Newsletter Subtitle
+            </label>
+            <textarea
+              rows={2}
+              value={content.newsletter?.subtitle || ''}
+              onChange={(e) => updateNewsletter('subtitle', e.target.value)}
+              placeholder="e.g. Direct notifications when new peptide batches are verified."
+              style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid var(--color-border)', borderRadius: 8, fontFamily: 'inherit' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Bottom Publish Button on Mobile */}
+      <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+        <button className="account-btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '12px 28px', fontSize: 14 }}>
+          <Save size={16} />
+          <span>{saving ? 'Publishing Changes...' : 'Publish Homepage Content'}</span>
+        </button>
+      </div>
     </div>
   );
 }

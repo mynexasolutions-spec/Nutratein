@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSiteContent } from '@/lib/siteContent';
 import ProductCard from '@/components/ProductCard.jsx';
 import Reveal from '@/components/Reveal.jsx';
@@ -222,8 +223,16 @@ export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState(DEFAULT_CONTENT);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+
+  const prevSlide = () => {
+    setCarouselIndex((prev) => (prev <= 0 ? (featured.length > 0 ? featured.length - 1 : 0) : prev - 1));
+  };
+  const nextSlide = () => {
+    setCarouselIndex((prev) => (prev >= featured.length - 1 ? 0 : prev + 1));
+  };
 
   useEffect(() => {
     let active = true;
@@ -232,7 +241,7 @@ export default function Home() {
       .select('*')
       .eq('featured', true)
       .eq('is_active', true)
-      .limit(3)
+      .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (active) {
           if (data && data.length > 0) {
@@ -509,19 +518,78 @@ export default function Home() {
           {loading ? (
             <p className="text-center" style={{ padding: '40px 0' }}>Loading products…</p>
           ) : (
-            <motion.div
-              className="featured-products-grid"
-              variants={gridVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, amount: 0.15 }}
-            >
-              {featured.map((p) => (
-                <motion.div key={p.id} variants={cardVariants}>
-                  <ProductCard product={p} />
-                </motion.div>
-              ))}
-            </motion.div>
+            <div className="featured-carousel-wrapper">
+              {/* Desktop Responsive Grid */}
+              <div className="featured-desktop-grid">
+                {featured.map((p) => (
+                  <div key={p.id} className="featured-grid-item">
+                    <ProductCard product={p} />
+                  </div>
+                ))}
+              </div>
+
+              {/* Mobile 1-Product Carousel with Left & Right Arrow Buttons */}
+              <div className="featured-mobile-carousel-box">
+                {featured.length > 1 && (
+                  <button
+                    type="button"
+                    className="featured-mobile-arrow left"
+                    onClick={prevSlide}
+                    aria-label="Previous featured product"
+                  >
+                    <ChevronLeft size={22} strokeWidth={2.4} />
+                  </button>
+                )}
+
+                <div className="featured-mobile-slide-holder">
+                  <AnimatePresence mode="wait">
+                    {featured[carouselIndex] && (
+                      <motion.div
+                        key={featured[carouselIndex].id || carouselIndex}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.25 }}
+                        className="featured-mobile-card-wrap"
+                      >
+                        <ProductCard product={featured[carouselIndex]} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {featured.length > 1 && (
+                  <button
+                    type="button"
+                    className="featured-mobile-arrow right"
+                    onClick={nextSlide}
+                    aria-label="Next featured product"
+                  >
+                    <ChevronRight size={22} strokeWidth={2.4} />
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile Carousel Indicators (Dots & Count) */}
+              {featured.length > 1 && (
+                <div className="featured-mobile-dots-bar">
+                  <div className="featured-dots-list">
+                    {featured.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className={`featured-carousel-dot ${idx === carouselIndex ? 'active' : ''}`}
+                        onClick={() => setCarouselIndex(idx)}
+                        aria-label={`Slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="featured-carousel-counter">
+                    {carouselIndex + 1} / {featured.length}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="featured-peptides-cta-wrap">
@@ -923,7 +991,7 @@ export default function Home() {
                           placeholder="you@example.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="newsletter-input"
+                          className="newsletter-input text-dark"
                           aria-label="Email address for newsletter"
                         />
                       </div>
